@@ -5,153 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2-5 포인트 뱅크</title>
     <style>
-        :root { --primary: #4A90E2; --gold: #FFD700; --silver: #C0C0C0; --bronze: #CD7F32; --bg: #F0F4F8; --plus: #E74C3C; --minus: #2980B9; }
+        :root { --primary: #4A90E2; --gold: #FFD700; --silver: #C0C0C0; --bronze: #CD7F32; --bg: #F0F4F8; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { background: white; width: 100%; max-width: 800px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: var(--primary); color: white; padding: 50px 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 2.2rem; letter-spacing: -1px; }
-        .list-container { padding: 20px 0; max-height: 75vh; overflow-y: auto; }
-        .user-item { display: flex; align-items: center; padding: 20px 40px; border-bottom: 1px solid #F2F4F6; cursor: pointer; transition: 0.2s; }
-        .user-item:hover { background-color: #F9FBFF; }
-        .rank { width: 60px; font-weight: 800; font-size: 1.4rem; color: #BBB; }
+        
+        /* 전체 컨테이너 너비 충분히 확보 */
+        .container { background: white; width: 100%; max-width: 850px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: var(--primary); color: white; padding: 40px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 2rem; }
+        
+        .list-container { padding: 10px 0; max-height: 75vh; overflow-y: auto; }
+        
+        /* 💡 리스트 아이템 레이아웃 수정: 숫자 잘림 방지 */
+        .user-item { 
+            display: flex; 
+            align-items: center; 
+            padding: 20px 30px; 
+            border-bottom: 1px solid #F2F4F6; 
+            cursor: pointer;
+        }
+        
+        .rank { width: 50px; font-weight: 800; font-size: 1.3rem; color: #BBB; flex-shrink: 0; }
         .rank-1 { color: var(--gold); } .rank-2 { color: var(--silver); } .rank-3 { color: var(--bronze); }
-        .name { flex-grow: 1; font-weight: 700; color: #333; font-size: 1.4rem; }
-        .points { font-weight: 800; color: var(--primary); font-size: 1.5rem; background: #EBF5FF; padding: 8px 20px; border-radius: 12px; }
+        
+        /* 이름 영역: 공간 확보 */
+        .name { flex-grow: 1; font-weight: 700; color: #333; font-size: 1.3rem; margin-right: 10px; }
+        
+        /* 💡 포인트 영역: 글자 크기 최적화 및 너비 자동 조절 */
+        .points { 
+            font-weight: 800; 
+            color: var(--primary); 
+            font-size: 1.4rem; /* 너무 크지 않게 조절 */
+            background: #EBF5FF; 
+            padding: 10px 20px; 
+            border-radius: 12px; 
+            min-width: 120px; /* 최소 너비 확보 */
+            text-align: right;
+            white-space: nowrap; /* 줄바꿈 방지 */
+        }
+
+        /* 팝업 모달 스타일 (생략 방지용 통합) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 90%; max-width: 550px; border-radius: 24px; overflow: hidden; animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { background: #F8F9FA; padding: 20px; border-bottom: 1px solid #EEE; display: flex; justify-content: space-between; align-items: center; }
-        .summary-box { display: flex; background: #FFF; padding: 20px; border-bottom: 1px solid #F0F0F0; justify-content: space-around; text-align: center; }
+        .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 24px; overflow: hidden; }
+        .modal-header { background: #F8F9FA; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #EEE; }
+        .summary-box { display: flex; padding: 15px; border-bottom: 1px solid #EEE; text-align: center; }
         .summary-item { flex: 1; }
-        .summary-label { font-size: 0.85rem; color: #888; margin-bottom: 5px; }
-        .summary-value { font-size: 1.2rem; font-weight: 800; }
-        .modal-body { padding: 10px 25px; max-height: 450px; overflow-y: auto; }
-        .log-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed #EEE; }
-        .plus { color: var(--plus); } .minus { color: var(--minus); }
+        .modal-body { padding: 20px; max-height: 400px; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🏆 2학년 5반 포인트 뱅크</h1>
-            <p>이름을 클릭하여 전체 내역을 확인하세요</p>
+            <p>우리 반 경제 활동 실시간 랭킹</p>
         </div>
         <div id="list" class="list-container">
-            <div style="text-align:center; padding:50px; color:#999;">데이터를 분석 중입니다...</div>
+            <div style="text-align:center; padding:50px; color:#999;">데이터를 확인 중입니다...</div>
         </div>
     </div>
 
     <div id="myModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">활동 리포트</h2>
-                <span style="cursor:pointer; font-size:1.8rem; color:#AAA;" onclick="closeModal()">&times;</span>
-            </div>
+            <div class="modal-header"><h2 id="modalTitle"></h2><span style="cursor:pointer; font-size:1.5rem;" onclick="closeModal()">&times;</span></div>
             <div class="summary-box">
-                <div class="summary-item">
-                    <div class="summary-label">누적 상점(+)</div>
-                    <div id="totalPlus" class="summary-value plus">0</div>
-                </div>
-                <div class="summary-item" style="border-left: 1px solid #EEE; border-right: 1px solid #EEE;">
-                    <div class="summary-label">누적 벌점(-)</div>
-                    <div id="totalMinus" class="summary-value minus">0</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-label">최종 잔액</div>
-                    <div id="totalNet" class="summary-value" style="color:var(--primary);">0</div>
-                </div>
+                <div class="summary-item"><div style="font-size:0.8rem; color:#888;">상점(+)</div><div id="totalPlus" style="font-weight:800; color:#E74C3C;">0</div></div>
+                <div class="summary-item" style="border-left:1px solid #EEE; border-right:1px solid #EEE;"><div style="font-size:0.8rem; color:#888;">벌점(-)</div><div id="totalMinus" style="font-weight:800; color:#2980B9;">0</div></div>
+                <div class="summary-item"><div style="font-size:0.8rem; color:#888;">잔액</div><div id="totalNet" style="font-weight:800; color:#4A90E2;">0</div></div>
             </div>
             <div id="modalBody" class="modal-body"></div>
         </div>
     </div>
 
     <script>
-        const STEIN_URL = "https://api.steinhq.com/v1/storages/69a6fb04affba40a625861dd"; 
+        const STEIN_URL = "https://api.steinhq.com/v1/storages/69a6fb04affba40a625861dd";
         let globalLogData = [];
 
-        // 💡 쉼표(,)를 완전히 제거하고 숫자로 만드는 더 강력한 함수
-        function toPureNumber(val) {
-            if (val === undefined || val === null || val === "") return 0;
-            // 모든 쉼표와 공백을 제거한 뒤 숫자로 변환
-            const str = String(val).replace(/,/g, "").trim();
-            const num = Number(str);
-            return isNaN(num) ? 0 : num;
-        }
+        // 💡 문자열 내 쉼표 등을 완벽히 제거하는 안전한 변환기
+        function toNum(v) { return Number(String(v || 0).replace(/[^0-9.-]+/g, "")); }
 
-        async function loadLeaderboard() {
-            const listDiv = document.getElementById('list');
-            const t = new Date().getTime();
-
+        async function loadData() {
             try {
+                const t = new Date().getTime();
                 const [sRes, lRes] = await Promise.all([
-                    fetch(`${STEIN_URL}/status?t=${t}`), 
+                    fetch(`${STEIN_URL}/status?t=${t}`),
                     fetch(`${STEIN_URL}/log?t=${t}`)
                 ]);
-                
                 const sData = await sRes.json();
                 globalLogData = await lRes.json();
 
-                // 18,000P가 8,000P로 보이지 않도록 강력하게 변환 후 정렬
+                // 💡 18,000을 정확히 읽도록 숫자로 변환 후 정렬
                 const cleaned = sData.filter(u => u.이름).map(u => {
-                    return { ...u, cp: toPureNumber(u.잔액) };
+                    return { 이름: u.이름, 잔액: u.잔액, cp: toNum(u.잔액) };
                 });
 
                 cleaned.sort((a, b) => b.cp - a.cp);
-                listDiv.innerHTML = "";
+                
+                const list = document.getElementById('list');
+                list.innerHTML = "";
 
                 cleaned.forEach((u, i) => {
-                    const r = i + 1;
                     const item = document.createElement('div');
                     item.className = 'user-item';
                     item.onclick = () => openModal(u.이름, u.cp);
                     
                     item.innerHTML = `
-                        <div class="rank ${r <= 3 ? 'rank-' + r : ''}">${r}</div>
+                        <div class="rank ${i < 3 ? 'rank-' + (i + 1) : ''}">${i + 1}</div>
                         <div class="name">${u.이름}</div>
                         <div class="points">${u.cp.toLocaleString()} P</div>
                     `;
-                    listDiv.appendChild(item);
+                    list.appendChild(item);
                 });
-            } catch (e) {
-                listDiv.innerHTML = "<div style='text-align:center; padding:50px;'>데이터 연동 실패</div>";
-            }
+            } catch (e) { console.error(e); }
         }
 
         function openModal(name, bal) {
-            const modal = document.getElementById('myModal');
-            document.getElementById('modalTitle').innerText = `${name} 학생 리포트`;
-            
+            document.getElementById('modalTitle').innerText = `${name} 리포트`;
             const logs = globalLogData.filter(l => l.이름 === name).reverse();
-            
-            let pSum = 0, mSum = 0;
-            logs.forEach(l => {
-                const val = toPureNumber(l.점수);
-                if(val > 0) pSum += val; else mSum += val;
-            });
-
-            document.getElementById('totalPlus').innerText = `+${pSum.toLocaleString()}`;
-            document.getElementById('totalMinus').innerText = `${mSum.toLocaleString()}`;
+            let p = 0, m = 0;
+            logs.forEach(l => { const v = toNum(l.점수); if(v > 0) p += v; else m += v; });
+            document.getElementById('totalPlus').innerText = `+${p.toLocaleString()}`;
+            document.getElementById('totalMinus').innerText = m.toLocaleString();
             document.getElementById('totalNet').innerText = `${bal.toLocaleString()} P`;
-
             document.getElementById('modalBody').innerHTML = logs.map(l => `
-                <div class="log-item">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:0.8rem; color:#999;">${l.날짜}</span>
-                        <span style="font-weight:500;">${l.사유}</span>
+                <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed #EEE;">
+                    <div><div style="font-size:0.7rem; color:#999;">${l.날짜}</div><div>${l.사유}</div></div>
+                    <div style="font-weight:800; color:${toNum(l.점수) > 0 ? '#E74C3C' : '#2980B9'}">
+                        ${toNum(l.점수) > 0 ? '+' : ''}${toNum(l.점수).toLocaleString()}
                     </div>
-                    <div style="font-weight:800; align-self:center;" class="${toPureNumber(l.점수) > 0 ? 'plus' : 'minus'}">
-                        ${toPureNumber(l.점수) > 0 ? '+' : ''}${toPureNumber(l.점수).toLocaleString()}
-                    </div>
-                </div>
-            `).join('') || '<p style="text-align:center; color:#CCC; padding:20px;">기록 없음</p>';
-
-            modal.style.display = "flex";
+                </div>`).join('');
+            document.getElementById('myModal').style.display = "flex";
         }
 
         function closeModal() { document.getElementById('myModal').style.display = "none"; }
-        window.onclick = function(e) { if (e.target == document.getElementById('myModal')) closeModal(); }
-
-        loadLeaderboard();
+        window.onclick = (e) => { if(e.target == document.getElementById('myModal')) closeModal(); }
+        loadData();
     </script>
 </body>
 </html>
