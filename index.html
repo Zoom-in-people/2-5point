@@ -37,14 +37,14 @@
             <p>이름을 클릭하여 전체 내역을 확인하세요</p>
         </div>
         <div id="list" class="list-container">
-            <div style="text-align:center; padding:50px; color:#999;">데이터를 최신화 중입니다...</div>
+            <div style="text-align:center; padding:50px; color:#999;">데이터를 분석 중입니다...</div>
         </div>
     </div>
 
     <div id="myModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">학생 활동 리포트</h2>
+                <h2 id="modalTitle">활동 리포트</h2>
                 <span style="cursor:pointer; font-size:1.8rem; color:#AAA;" onclick="closeModal()">&times;</span>
             </div>
             <div class="summary-box">
@@ -69,70 +69,69 @@
         const STEIN_URL = "https://api.steinhq.com/v1/storages/69a6fb04affba40a625861dd"; 
         let globalLogData = [];
 
-        // 💡 숫자를 안전하게 추출하는 함수를 별도로 정의합니다.
-        function getSafeNumber(val) {
-            if (!val) return 0;
-            // 쉼표(,), 공백, 화폐 기호 등을 모두 제거하고 순수 숫자만 추출
-            const cleaned = String(val).replace(/[^0-9.-]+/g, "");
-            return Number(cleaned) || 0;
+        // 💡 쉼표(,)를 완전히 제거하고 숫자로 만드는 더 강력한 함수
+        function toPureNumber(val) {
+            if (val === undefined || val === null || val === "") return 0;
+            // 모든 쉼표와 공백을 제거한 뒤 숫자로 변환
+            const str = String(val).replace(/,/g, "").trim();
+            const num = Number(str);
+            return isNaN(num) ? 0 : num;
         }
 
         async function loadLeaderboard() {
             const listDiv = document.getElementById('list');
-            const timestamp = new Date().getTime();
+            const t = new Date().getTime();
 
             try {
-                const [statusRes, logRes] = await Promise.all([
-                    fetch(`${STEIN_URL}/status?t=${timestamp}`), 
-                    fetch(`${STEIN_URL}/log?t=${timestamp}`)
+                const [sRes, lRes] = await Promise.all([
+                    fetch(`${STEIN_URL}/status?t=${t}`), 
+                    fetch(`${STEIN_URL}/log?t=${t}`)
                 ]);
                 
-                const statusData = await statusRes.json();
-                globalLogData = await logRes.json();
+                const sData = await sRes.json();
+                globalLogData = await lRes.json();
 
-                // 18,000P 누락 방지 정렬 로직
-                const cleanedStatus = statusData.filter(u => u.이름).map(user => {
-                    return { ...user, cleanPoint: getSafeNumber(user.잔액) };
+                // 18,000P가 8,000P로 보이지 않도록 강력하게 변환 후 정렬
+                const cleaned = sData.filter(u => u.이름).map(u => {
+                    return { ...u, cp: toPureNumber(u.잔액) };
                 });
 
-                cleanedStatus.sort((a, b) => b.cleanPoint - a.cleanPoint);
+                cleaned.sort((a, b) => b.cp - a.cp);
                 listDiv.innerHTML = "";
 
-                cleanedStatus.forEach((user, index) => {
-                    const rank = index + 1;
+                cleaned.forEach((u, i) => {
+                    const r = i + 1;
                     const item = document.createElement('div');
                     item.className = 'user-item';
-                    item.onclick = () => openModal(user.이름, user.cleanPoint);
+                    item.onclick = () => openModal(u.이름, u.cp);
                     
                     item.innerHTML = `
-                        <div class="rank ${rank <= 3 ? 'rank-' + rank : ''}">${rank}</div>
-                        <div class="name">${user.이름}</div>
-                        <div class="points">${Math.floor(user.cleanPoint).toLocaleString()} P</div>
+                        <div class="rank ${r <= 3 ? 'rank-' + r : ''}">${r}</div>
+                        <div class="name">${u.이름}</div>
+                        <div class="points">${u.cp.toLocaleString()} P</div>
                     `;
                     listDiv.appendChild(item);
                 });
             } catch (e) {
-                listDiv.innerHTML = "<div style='text-align:center; padding:50px;'>데이터 연동 중...</div>";
+                listDiv.innerHTML = "<div style='text-align:center; padding:50px;'>데이터 연동 실패</div>";
             }
         }
 
-        function openModal(name, currentBalance) {
+        function openModal(name, bal) {
             const modal = document.getElementById('myModal');
             document.getElementById('modalTitle').innerText = `${name} 학생 리포트`;
             
             const logs = globalLogData.filter(l => l.이름 === name).reverse();
             
-            let plusSum = 0;
-            let minusSum = 0;
+            let pSum = 0, mSum = 0;
             logs.forEach(l => {
-                const p = getSafeNumber(l.점수);
-                if(p > 0) plusSum += p;
-                else minusSum += p;
+                const val = toPureNumber(l.점수);
+                if(val > 0) pSum += val; else mSum += val;
             });
 
-            document.getElementById('totalPlus').innerText = `+${plusSum.toLocaleString()}`;
-            document.getElementById('totalMinus').innerText = `${minusSum.toLocaleString()}`;
-            document.getElementById('totalNet').innerText = `${currentBalance.toLocaleString()} P`;
+            document.getElementById('totalPlus').innerText = `+${pSum.toLocaleString()}`;
+            document.getElementById('totalMinus').innerText = `${mSum.toLocaleString()}`;
+            document.getElementById('totalNet').innerText = `${bal.toLocaleString()} P`;
 
             document.getElementById('modalBody').innerHTML = logs.map(l => `
                 <div class="log-item">
@@ -140,17 +139,17 @@
                         <span style="font-size:0.8rem; color:#999;">${l.날짜}</span>
                         <span style="font-weight:500;">${l.사유}</span>
                     </div>
-                    <div style="font-weight:800; align-self:center;" class="${getSafeNumber(l.점수) > 0 ? 'plus' : 'minus'}">
-                        ${getSafeNumber(l.점수) > 0 ? '+' : ''}${getSafeNumber(l.점수).toLocaleString()}
+                    <div style="font-weight:800; align-self:center;" class="${toPureNumber(l.점수) > 0 ? 'plus' : 'minus'}">
+                        ${toPureNumber(l.점수) > 0 ? '+' : ''}${toPureNumber(l.점수).toLocaleString()}
                     </div>
                 </div>
-            `).join('') || '<p style="text-align:center; color:#CCC; padding:20px;">기록이 없습니다.</p>';
+            `).join('') || '<p style="text-align:center; color:#CCC; padding:20px;">기록 없음</p>';
 
             modal.style.display = "flex";
         }
 
         function closeModal() { document.getElementById('myModal').style.display = "none"; }
-        window.onclick = function(event) { if (event.target == document.getElementById('myModal')) closeModal(); }
+        window.onclick = function(e) { if (e.target == document.getElementById('myModal')) closeModal(); }
 
         loadLeaderboard();
     </script>
