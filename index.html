@@ -50,8 +50,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 2-5 챌린저스 뱅크</h1>
-            <p>현재 우리 반 최고 티어는 누구?</p>
+            <h1>🏆 2-5 포인트 뱅크</h1>
+            <p>현재 우리 반 최고 포인트는 누구?</p>
         </div>
         <div id="list" class="list-container"></div>
     </div>
@@ -84,7 +84,7 @@
 
                 // 💡 뉴스 자막 가져오기: status 시트의 G1 셀 등에 '공지사항' 열을 만들어 활용 가능
                 // 여기서는 예시로 고정 메시지 또는 특정 셀 데이터를 연결하도록 구성합니다.
-                document.getElementById('newsText').innerText = "📢 [공지] 이번 주 포인트 정산 완료! 1등은 현재 '이서지' 학생입니다. 축하합니다! | 과학 시간 실험 참여 시 보너스 500P 지급!";
+                document.getElementById('newsText').innerText = "📢 [공지] 이번 주 포인트 정산 완료! 1등은 현재 '이서지' 학생입니다. 축하합니다!";
 
                 const cleaned = sData.filter(u => u.이름).map(u => ({
                     ...u, score: Number(String(u.잔액).replace(/[^0-9-]/g, "")) || 0
@@ -114,3 +114,4 @@
     </script>
 </body>
 </html>
+
