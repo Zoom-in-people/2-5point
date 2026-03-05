@@ -7,42 +7,26 @@
     <style>
         :root { --primary: #4A90E2; --gold: #FFD700; --silver: #C0C0C0; --bronze: #CD7F32; --bg: #F0F4F8; --plus: #E74C3C; --minus: #2980B9; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
-        
-        /* 메인 컨테이너 (너비 800px 확장) */
         .container { background: white; width: 100%; max-width: 800px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; }
         .header { background: var(--primary); color: white; padding: 50px 20px; text-align: center; }
         .header h1 { margin: 0; font-size: 2.2rem; letter-spacing: -1px; }
-        
         .list-container { padding: 20px 0; max-height: 75vh; overflow-y: auto; }
         .user-item { display: flex; align-items: center; padding: 20px 40px; border-bottom: 1px solid #F2F4F6; cursor: pointer; transition: 0.2s; }
         .user-item:hover { background-color: #F9FBFF; }
-        
         .rank { width: 60px; font-weight: 800; font-size: 1.4rem; color: #BBB; }
         .rank-1 { color: var(--gold); } .rank-2 { color: var(--silver); } .rank-3 { color: var(--bronze); }
         .name { flex-grow: 1; font-weight: 700; color: #333; font-size: 1.4rem; }
         .points { font-weight: 800; color: var(--primary); font-size: 1.5rem; background: #EBF5FF; padding: 8px 20px; border-radius: 12px; }
-
-        /* 팝업 모달 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
         .modal-content { background: white; width: 90%; max-width: 550px; border-radius: 24px; overflow: hidden; animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
         .modal-header { background: #F8F9FA; padding: 20px; border-bottom: 1px solid #EEE; display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h2 { margin: 0; font-size: 1.4rem; color: #333; }
-        .close-btn { font-size: 1.8rem; cursor: pointer; color: #AAA; font-weight: bold; }
-        
-        /* 요약 통계 박스 */
         .summary-box { display: flex; background: #FFF; padding: 20px; border-bottom: 1px solid #F0F0F0; justify-content: space-around; text-align: center; }
         .summary-item { flex: 1; }
         .summary-label { font-size: 0.85rem; color: #888; margin-bottom: 5px; }
         .summary-value { font-size: 1.2rem; font-weight: 800; }
-
         .modal-body { padding: 10px 25px; max-height: 450px; overflow-y: auto; }
         .log-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed #EEE; }
-        .log-info { display: flex; flex-direction: column; }
-        .log-date { font-size: 0.8rem; color: #999; margin-bottom: 3px; }
-        .log-reason { font-weight: 500; color: #444; font-size: 1rem; }
-        .log-pts { font-weight: 800; align-self: center; font-size: 1.1rem; }
         .plus { color: var(--plus); } .minus { color: var(--minus); }
     </style>
 </head>
@@ -50,7 +34,7 @@
     <div class="container">
         <div class="header">
             <h1>🏆 2학년 5반 포인트 뱅크</h1>
-            <p>이름을 클릭하여 전체 내역과 누적 통계를 확인하세요</p>
+            <p>이름을 클릭하여 전체 내역을 확인하세요</p>
         </div>
         <div id="list" class="list-container">
             <div style="text-align:center; padding:50px; color:#999;">데이터를 최신화 중입니다...</div>
@@ -61,7 +45,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">학생 활동 리포트</h2>
-                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <span style="cursor:pointer; font-size:1.8rem; color:#AAA;" onclick="closeModal()">&times;</span>
             </div>
             <div class="summary-box">
                 <div class="summary-item">
@@ -82,16 +66,22 @@
     </div>
 
     <script>
-        // 선생님의 Stein API 주소 (캐시 방지 타임스탬프 로직 포함)
         const STEIN_URL = "https://api.steinhq.com/v1/storages/69a6fb04affba40a625861dd"; 
         let globalLogData = [];
 
+        // 💡 숫자를 안전하게 추출하는 함수를 별도로 정의합니다.
+        function getSafeNumber(val) {
+            if (!val) return 0;
+            // 쉼표(,), 공백, 화폐 기호 등을 모두 제거하고 순수 숫자만 추출
+            const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+            return Number(cleaned) || 0;
+        }
+
         async function loadLeaderboard() {
             const listDiv = document.getElementById('list');
-            const timestamp = new Date().getTime(); // 캐시 방지용
+            const timestamp = new Date().getTime();
 
             try {
-                // Stein API를 통해 status와 log 시트 호출
                 const [statusRes, logRes] = await Promise.all([
                     fetch(`${STEIN_URL}/status?t=${timestamp}`), 
                     fetch(`${STEIN_URL}/log?t=${timestamp}`)
@@ -100,25 +90,18 @@
                 const statusData = await statusRes.json();
                 globalLogData = await logRes.json();
 
-                // 💡 10,000P 이상 고득점자 정렬 및 숫자 변환 오류 보정
+                // 18,000P 누락 방지 정렬 로직
                 const cleanedStatus = statusData.filter(u => u.이름).map(user => {
-                    const rawValue = user.잔액 || 0;
-                    // 문자열 내 쉼표(,) 등 제거 후 강력하게 숫자로 변환
-                    const pointValue = parseFloat(String(rawValue).replace(/[^0-9.-]+/g, "")) || 0;
-                    return { ...user, cleanPoint: pointValue };
+                    return { ...user, cleanPoint: getSafeNumber(user.잔액) };
                 });
 
-                // 점수 높은 순(내림차순) 정렬
                 cleanedStatus.sort((a, b) => b.cleanPoint - a.cleanPoint);
-
                 listDiv.innerHTML = "";
 
                 cleanedStatus.forEach((user, index) => {
                     const rank = index + 1;
                     const item = document.createElement('div');
                     item.className = 'user-item';
-                    
-                    // 클릭 시 팝업 열기 (현재 확정된 포인트값 전달)
                     item.onclick = () => openModal(user.이름, user.cleanPoint);
                     
                     item.innerHTML = `
@@ -129,8 +112,7 @@
                     listDiv.appendChild(item);
                 });
             } catch (e) {
-                console.error(e);
-                listDiv.innerHTML = "<div style='text-align:center; padding:50px;'>데이터 연동 중 오류가 발생했습니다.</div>";
+                listDiv.innerHTML = "<div style='text-align:center; padding:50px;'>데이터 연동 중...</div>";
             }
         }
 
@@ -138,47 +120,38 @@
             const modal = document.getElementById('myModal');
             document.getElementById('modalTitle').innerText = `${name} 학생 리포트`;
             
-            // 해당 학생의 모든 기록 필터링 (최신순)
             const logs = globalLogData.filter(l => l.이름 === name).reverse();
             
-            // 상점/벌점 통계 계산
             let plusSum = 0;
             let minusSum = 0;
             logs.forEach(l => {
-                const p = parseFloat(String(l.점수).replace(/[^0-9.-]+/g, "")) || 0;
+                const p = getSafeNumber(l.점수);
                 if(p > 0) plusSum += p;
                 else minusSum += p;
             });
 
             document.getElementById('totalPlus').innerText = `+${plusSum.toLocaleString()}`;
             document.getElementById('totalMinus').innerText = `${minusSum.toLocaleString()}`;
-            document.getElementById('totalNet').innerText = `${Number(currentBalance).toLocaleString()} P`;
+            document.getElementById('totalNet').innerText = `${currentBalance.toLocaleString()} P`;
 
-            // 상세 내역 렌더링
             document.getElementById('modalBody').innerHTML = logs.map(l => `
                 <div class="log-item">
-                    <div class="log-info">
-                        <span class="log-date">${l.날짜}</span>
-                        <span class="log-reason">${l.사유}</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:0.8rem; color:#999;">${l.날짜}</span>
+                        <span style="font-weight:500;">${l.사유}</span>
                     </div>
-                    <div class="log-pts ${l.점수 > 0 ? 'plus' : 'minus'}">
-                        ${l.점수 > 0 ? '+' : ''}${Number(l.점수).toLocaleString()}
+                    <div style="font-weight:800; align-self:center;" class="${getSafeNumber(l.점수) > 0 ? 'plus' : 'minus'}">
+                        ${getSafeNumber(l.점수) > 0 ? '+' : ''}${getSafeNumber(l.점수).toLocaleString()}
                     </div>
                 </div>
-            `).join('') || '<p style="text-align:center; color:#CCC; padding:20px;">활동 기록이 없습니다.</p>';
+            `).join('') || '<p style="text-align:center; color:#CCC; padding:20px;">기록이 없습니다.</p>';
 
             modal.style.display = "flex";
         }
 
         function closeModal() { document.getElementById('myModal').style.display = "none"; }
-        
-        // 배경 클릭 시 팝업 닫기
-        window.onclick = function(event) {
-            const modal = document.getElementById('myModal');
-            if (event.target == modal) closeModal();
-        }
+        window.onclick = function(event) { if (event.target == document.getElementById('myModal')) closeModal(); }
 
-        // 페이지 접속 시 실행
         loadLeaderboard();
     </script>
 </body>
