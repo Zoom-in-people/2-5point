@@ -16,7 +16,6 @@
         .user-item { display: flex; align-items: center; padding: 18px 30px; border-bottom: 1px solid #F2F4F6; cursor: pointer; transition: 0.2s; }
         .user-item:hover { background-color: #F9FBFF; }
         
-        /* 등수 및 티어 */
         .rank-area { width: 65px; display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
         .rank-num { font-weight: 800; font-size: 1.2rem; color: #BBB; }
         .tier-badge { font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; color: white; margin-top: 4px; }
@@ -29,17 +28,15 @@
         .name { flex-grow: 1; font-weight: 700; color: #333; font-size: 1.3rem; margin-left: 15px; }
         .points { font-weight: 800; color: var(--primary); font-size: 1.4rem; background: #EBF5FF; padding: 8px 18px; border-radius: 12px; min-width: 110px; text-align: right; }
 
-        /* 명예의 전당 효과 (1~3등) */
         .top-1 { background: linear-gradient(to right, #FFFDF0, #FFFFFF); border-left: 5px solid var(--gold); }
         .top-2 { border-left: 5px solid var(--silver); }
         .top-3 { border-left: 5px solid var(--bronze); }
 
         /* 하단 전광판 */
-        .news-ticker { position: fixed; bottom: 0; left: 0; width: 100%; background: #333; color: white; padding: 12px 0; font-size: 0.95rem; overflow: hidden; white-space: nowrap; z-index: 2000; }
+        .news-ticker { position: fixed; bottom: 0; left: 0; width: 100%; background: #333; color: white; padding: 12px 0; font-size: 0.95rem; overflow: hidden; white-space: nowrap; z-index: 2000; cursor: pointer; }
         .ticker-content { display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; font-weight: 500; }
         @keyframes ticker { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
 
-        /* 상세 리포트 모달 복구 */
         .modal { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 24px; overflow: hidden; animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -60,7 +57,9 @@
         </div>
     </div>
 
-    <div class="news-ticker"><div class="ticker-content" id="newsText">📢 최신 소식을 업데이트 중입니다...</div></div>
+    <div class="news-ticker" onclick="editNotice()">
+        <div class="ticker-content" id="newsText">📢 자막을 클릭하여 공지사항을 입력하세요!</div>
+    </div>
 
     <div id="myModal" class="modal">
         <div class="modal-content">
@@ -91,19 +90,27 @@
             return { n: 'BRONZE', c: 't-bronze', i: '🌱' };
         }
 
+        // 💡 비밀번호 없이 바로 수정
+        function editNotice() {
+            const current = document.getElementById('newsText').innerText;
+            const next = prompt("📢 새로운 공지사항을 입력하세요:", current);
+            if (next !== null && next.trim() !== "") {
+                document.getElementById('newsText').innerText = next;
+                localStorage.setItem('classNotice', next);
+            }
+        }
+
         async function init() {
             const t = new Date().getTime();
             try {
+                const savedNotice = localStorage.getItem('classNotice');
+                if (savedNotice) document.getElementById('newsText').innerText = savedNotice;
+
                 const [sR, lR] = await Promise.all([
                     fetch(`${_u}/status?t=${t}`), fetch(`${_u}/log?t=${t}`)
                 ]);
                 const sD = await sR.json();
                 globalLog = await lR.json();
-
-                // 💡 자막 설정: 시트의 '공지사항' 열이 없다면 아래 텍스트를 직접 수정하세요.
-                // 만약 시트 G1 셀에 공지를 썼다면 sD[0].공지사항 식으로 가져올 수 있습니다.
-                const notice = "📢 [공지]";
-                document.getElementById('newsText').innerText = notice;
 
                 const clean = sD.filter(u => u.이름).map(u => ({
                     ...u, cp: toN(u.잔액)
@@ -132,7 +139,10 @@
             document.getElementById('modalTitle').innerText = `${name} 학생 리포트`;
             const userLogs = globalLog.filter(l => l.이름 === name).reverse();
             let p = 0, m = 0;
-            userLogs.forEach(l => { const v = toN(l.점수); if(v > 0) p += v; else m += v; });
+            userLogs.forEach(l => { 
+                const v = toN(l.점수); 
+                if(v > 0) p += v; else m += v; 
+            });
 
             document.getElementById('totalPlus').innerText = `+${p.toLocaleString()}`;
             document.getElementById('totalMinus').innerText = m.toLocaleString();
@@ -141,7 +151,7 @@
                 <div class="log-item">
                     <div><div style="font-size:0.75rem; color:#999;">${l.날짜}</div><div style="font-weight:600;">${l.사유}</div></div>
                     <div style="font-weight:800; color:${toN(l.점수) > 0 ? 'var(--plus)' : 'var(--minus)'}">
-                        ${toN(l.점수) > 0 ? '+' : ''}${toN(l.점 - 0).toLocaleString()}
+                        ${toN(l.점수) > 0 ? '+' : ''}${toN(l.점수).toLocaleString()}
                     </div>
                 </div>`).join('') || '<p style="text-align:center; padding:20px; color:#999;">활동 내역이 없습니다.</p>';
             document.getElementById('myModal').style.display = "flex";
