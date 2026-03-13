@@ -77,7 +77,7 @@
     </div>
 
     <script>
-        const _u = "https://api.steinhq.com/v1/storages/69a6fb04affba40a625861dd";
+        const _u = "https://script.google.com/macros/s/AKfycbxwC4npay5vdEkSGWXHf744a0h9JPR4HYaX6EgJRDZjVhgmsPMFA-ysOuo1dxv_GKgwog/exec";
         let globalLog = [];
 
         function toN(v) { return Number(String(v || 0).replace(/[^0-9.-]/g, "")) || 0; }
@@ -90,12 +90,14 @@
             return { n: 'BRONZE', c: 't-bronze', i: '🌱' };
         }
 
-        async function init() {
-            const t = new Date().getTime();
-            try {
-                const [sR, lR] = await Promise.all([
-                    fetch(`${_u}/status?t=${t}`), fetch(`${_u}/log?t=${t}`)
-                ]);
+       async function init() {
+    const t = new Date().getTime();
+    try {
+        // 💡 주소 뒤에 ?type=status 와 ?type=log 를 붙여서 호출하도록 요렇게만 바꿔주세요.
+        const [sR, lR] = await Promise.all([
+            fetch(`${_u}?type=status`), 
+            fetch(`${_u}?type=log`)
+        ]);
                 const sD = await sR.json();
                 const logData = await lR.json();
 
@@ -171,3 +173,4 @@
     </script>
 </body>
 </html>
+
