@@ -16,9 +16,10 @@
         .user-item { display: flex; align-items: center; padding: 18px 30px; border-bottom: 1px solid #F2F4F6; cursor: pointer; transition: 0.2s; }
         .user-item:hover { background-color: #F9FBFF; }
         
+        /* 등수 및 티어 뱃지 */
         .rank-area { width: 65px; display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
         .rank-num { font-weight: 800; font-size: 1.2rem; color: #BBB; }
-        .tier-badge { font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; color: white; margin-top: 4px; }
+        .tier-badge { font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; color: white; margin-top: 4px; text-align: center; }
         .t-challenger { background: var(--challenger); box-shadow: 0 0 8px rgba(244,0,0,0.3); }
         .t-master { background: var(--master); }
         .t-gold { background: var(--gold); }
@@ -28,22 +29,24 @@
         .name { flex-grow: 1; font-weight: 700; color: #333; font-size: 1.3rem; margin-left: 15px; }
         .points { font-weight: 800; color: var(--primary); font-size: 1.4rem; background: #EBF5FF; padding: 8px 18px; border-radius: 12px; min-width: 110px; text-align: right; }
 
+        /* 상위권 하이라이트 */
         .top-1 { background: linear-gradient(to right, #FFFDF0, #FFFFFF); border-left: 5px solid var(--gold); }
         .top-2 { border-left: 5px solid var(--silver); }
         .top-3 { border-left: 5px solid var(--bronze); }
 
-        /* 하단 전광판 (클릭 불필요하므로 cursor 속성 제거) */
+        /* 하단 흐르는 전광판 (시트 연동) */
         .news-ticker { position: fixed; bottom: 0; left: 0; width: 100%; background: #333; color: white; padding: 12px 0; font-size: 0.95rem; overflow: hidden; white-space: nowrap; z-index: 2000; }
-        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; font-weight: 500; }
+        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker 25s linear infinite; font-weight: 500; }
         @keyframes ticker { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
 
+        /* 💡 사라졌던 팝업(모달) 스타일 완벽 복구 */
         .modal { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 24px; overflow: hidden; animation: slideUp 0.3s ease-out; }
+        .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 24px; overflow: hidden; animation: slideUp 0.3s ease-out; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .modal-header { background: #F8F9FA; padding: 20px; border-bottom: 1px solid #EEE; display: flex; justify-content: space-between; align-items: center; }
         .summary-box { display: flex; background: #FFF; padding: 20px; border-bottom: 1px solid #F0F0F0; justify-content: space-around; text-align: center; }
         .modal-body { padding: 15px 25px; max-height: 400px; overflow-y: auto; }
-        .log-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed #EEE; }
+        .log-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed #EEE; align-items: center; }
     </style>
 </head>
 <body>
@@ -70,7 +73,7 @@
             <div class="summary-box">
                 <div style="flex:1;"><div style="font-size:0.8rem; color:#888;">상점</div><div id="totalPlus" style="font-weight:800; color:var(--plus); font-size:1.2rem;">0</div></div>
                 <div style="flex:1; border-left:1px solid #EEE; border-right:1px solid #EEE;"><div style="font-size:0.8rem; color:#888;">벌점</div><div id="totalMinus" style="font-weight:800; color:var(--minus); font-size:1.2rem;">0</div></div>
-                <div style="flex:1;"><div style="font-size:0.8rem; color:#888;">최종</div><div id="totalNet" style="font-weight:800; color:var(--primary); font-size:1.2rem;">0</div></div>
+                <div style="flex:1;"><div style="font-size:0.8rem; color:#888;">최종 잔액</div><div id="totalNet" style="font-weight:800; color:var(--primary); font-size:1.2rem;">0</div></div>
             </div>
             <div id="modalBody" class="modal-body"></div>
         </div>
@@ -80,8 +83,10 @@
         const _u = "https://api.steinhq.com/v1/storages/69a6fb04affba40a625861dd";
         let globalLog = [];
 
+        // 숫자 안전 변환기
         function toN(v) { return Number(String(v || 0).replace(/[^0-9.-]/g, "")) || 0; }
 
+        // 등수별 티어 계산기
         function getT(r) {
             if (r <= 3) return { n: 'CHALLENGER', c: 't-challenger', i: '👑' };
             if (r <= 10) return { n: 'MASTER', c: 't-master', i: '🔥' };
@@ -93,17 +98,18 @@
         async function init() {
             const t = new Date().getTime();
             try {
+                // status(잔액/명단/공지)와 log(상세내역)를 동시에 가져옴
                 const [sR, lR] = await Promise.all([
                     fetch(`${_u}/status?t=${t}`), fetch(`${_u}/log?t=${t}`)
                 ]);
                 const sD = await sR.json();
                 globalLog = await lR.json();
 
-                // 💡 [핵심] 시트의 K2 셀(공지) 내용 읽어오기
-                // sD[0]은 시트의 첫 번째 데이터 행(2행)을 의미합니다.
-                const sheetNotice = (sD[0] && sD[0].공지) ? sD[0].공지 : "📢 공지사항이 없습니다.";
+                // 💡 시트의 K2 셀('공지' 열) 연동 (선생님이 원하신 기능)
+                const sheetNotice = (sD[0] && sD[0].공지) ? sD[0].공지 : "📢 선생님, 시트의 K열(공지)에 내용을 입력해주세요!";
                 document.getElementById('newsText').innerText = sheetNotice;
 
+                // 데이터 정제 및 내림차순 정렬
                 const clean = sD.filter(u => u.이름).map(u => ({
                     ...u, cp: toN(u.잔액)
                 })).sort((a, b) => b.cp - a.cp);
@@ -113,6 +119,8 @@
                     const r = i + 1;
                     const tier = getT(r);
                     const medal = r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '';
+                    
+                    // 💡 onclick="openModal(...)" 이벤트가 포함된 리스트 아이템 생성
                     return `
                         <div class="user-item ${r <= 3 ? 'top-'+r : ''}" onclick="openModal('${u.이름}', ${u.cp})">
                             <div class="rank-area">
@@ -124,33 +132,53 @@
                         </div>
                     `;
                 }).join('');
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('list').innerHTML = "<div style='text-align:center; padding:50px; color:red;'>데이터를 불러오지 못했습니다. 새로고침 해주세요.</div>";
+            }
         }
 
+        // 💡 사라졌던 상세 리포트 호출 함수 복구
         function openModal(name, score) {
             document.getElementById('modalTitle').innerText = `${name} 학생 리포트`;
+            
+            // log 시트에서 해당 학생의 기록만 찾아 최신순(reverse) 정렬
             const userLogs = globalLog.filter(l => l.이름 === name).reverse();
             let p = 0, m = 0;
+            
             userLogs.forEach(l => { 
                 const v = toN(l.점수); 
                 if(v > 0) p += v; else m += v; 
             });
 
+            // 상단 요약 박스 업데이트
             document.getElementById('totalPlus').innerText = `+${p.toLocaleString()}`;
             document.getElementById('totalMinus').innerText = m.toLocaleString();
             document.getElementById('totalNet').innerText = `${score.toLocaleString()} P`;
+            
+            // 하단 내역 리스트 업데이트
             document.getElementById('modalBody').innerHTML = userLogs.map(l => `
                 <div class="log-item">
-                    <div><div style="font-size:0.75rem; color:#999;">${l.날짜}</div><div style="font-weight:600;">${l.사유}</div></div>
-                    <div style="font-weight:800; color:${toN(l.점수) > 0 ? 'var(--plus)' : 'var(--minus)'}">
+                    <div style="flex-grow:1;">
+                        <div style="font-size:0.75rem; color:#999;">${l.날짜}</div>
+                        <div style="font-weight:600; color:#333;">${l.사유}</div>
+                    </div>
+                    <div style="font-weight:800; font-size:1.1rem; color:${toN(l.점수) > 0 ? 'var(--plus)' : 'var(--minus)'}">
                         ${toN(l.점수) > 0 ? '+' : ''}${toN(l.점수).toLocaleString()}
                     </div>
-                </div>`).join('') || '<p style="text-align:center; padding:20px; color:#999;">활동 내역이 없습니다.</p>';
+                </div>`).join('') || '<p style="text-align:center; padding:30px; color:#999;">아직 활동 내역이 없습니다.</p>';
+            
+            // 팝업 화면에 표시
             document.getElementById('myModal').style.display = "flex";
         }
 
+        // 팝업 닫기 함수
         function closeModal() { document.getElementById('myModal').style.display = "none"; }
+        
+        // 팝업 바깥쪽 어두운 배경 클릭 시 닫기
         window.onclick = (e) => { if(e.target == document.getElementById('myModal')) closeModal(); }
+        
+        // 실행!
         init();
     </script>
 </body>
